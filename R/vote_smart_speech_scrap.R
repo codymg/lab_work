@@ -8,7 +8,6 @@ library(corpus)
 library(textstem)
 library(ggwordcloud)
 library(ggthemes)
-library(caret)
 
 
 ##############################################
