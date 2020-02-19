@@ -6,7 +6,7 @@
 
 library(tidyverse)
 
-#read in all seperate speech files (trump_dat, sanders_dat, etc.)
+#read in all/as many as desired speech files (trump_dat, sanders_dat, etc.)
 
 
 yang_dat <- readRDS(url("https://github.com/codymg/lab_work/master/data/yang_dat.rds"))
