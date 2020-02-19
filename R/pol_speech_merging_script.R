@@ -23,4 +23,5 @@ romney_dat <- readRDS(url("https://github.com/codymg/lab_work/master/data/romney
 thune_dat <- readRDS(url("https://github.com/codymg/lab_work/master/data/thune_dat.rds"))
 
 dat <- trump_dat %>%
-  bind_rows(mcconnell_dat, mccarthy_dat, romney_dat, thune_dat, sanders_dat, warren_dat, biden_dat, buttigieg_dat, klobuchar_dat, yang_dat, bloomberg_dat)
+  bind_rows(mcconnell_dat, mccarthy_dat, romney_dat, thune_dat, sanders_dat, warren_dat, 
+            biden_dat, buttigieg_dat, klobuchar_dat, yang_dat, bloomberg_dat)
