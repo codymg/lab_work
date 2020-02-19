@@ -4,6 +4,8 @@
 #############################################
 #############################################
 
+library(tidyverse)
+
 #read in all seperate speech files (trump_dat, sanders_dat, etc.)
 
 
