@@ -9,8 +9,10 @@ library(ggthemes)
 
 #Analysis 
 
-dat <- readRDS("C:/Users/codyg/Documents/GitHub_Projects/Presidential_Speeches/data/pol_2020_speeches.rds") %>% #read in data
-  filter(politician == 'donald trump') #filtering to politician of your choice for sake of quicker analysis
+#read in individual dat or if you want the entirety of the speech data, use the speech merging script and then use that dat in the following script
+
+dat <- readRDS(url("https://github.com/codymg/lab_work/master/data/trump_dat.rds")) # %>% #read in data
+ # filter(politician == 'donald trump') #filtering to politician of your choice for sake of quicker analysis
 
 
 #tokenizing 
