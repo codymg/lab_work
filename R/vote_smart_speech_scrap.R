@@ -16,30 +16,28 @@ library(ggthemes)
 ##############################################
 ##############################################
 
-
-## Webscrape data from links at http://transcripts.foreverdreaming.org/viewforum.php?f=738
 url_home <- "https://justfacts.votesmart.org/candidate/public-statements/15723/donald-trump//?s=date&p="
 
 
-num_pages <- read_html('https://justfacts.votesmart.org/candidate/public-statements/15723/donald-trump') %>%
-  html_nodes(xpath = "//h7") %>% 
-  html_text() %>%
-  str_remove_all("Page 1 of ") %>%
-  as.numeric(.) %>%
-  .[1]
+num_pages <- read_html('https://justfacts.votesmart.org/candidate/public-statements/15723/donald-trump') %>% # establishing number of total pages of speeches
+  html_nodes(xpath = "//h7") %>% #node to numbers
+  html_text() %>% #extracting text
+  str_remove_all("Page 1 of ") %>% #getting rid of preface
+  as.numeric(.) %>% #classifying as numeric
+  .[1] #taking only 1 number
 
 
-num_pages_search <- read_html('https://justfacts.votesmart.org/candidate/public-statements/15723/donald-trump?start=&end=&search=Russia') %>%
+num_pages_search <- read_html('https://justfacts.votesmart.org/candidate/public-statements/15723/donald-trump?start=&end=&search=Russia') %>% #can use the following link and its base to search speeches with specific terms
   html_nodes('.text-center:nth-child(1) h7') %>% 
   html_text() %>%
   str_remove_all("Page 1 of ") %>%
   as.numeric(.)
 
-test <- lapply(paste0(url_home, 1:num_pages), #using only the first 2 pages so the server does not burn out (to get all docs change "2" to num_pages)
+test <- lapply(paste0(url_home, 1:num_pages), #getting all pages, recommend using 5-6 instead of num_pages to be kind
                function(url){
-                 url %>% read_html() %>% 
+                 url %>% read_html() %>% #running url to get html with the whole page
                    html_nodes(xpath = '//*[contains(concat( " ", @class, " " ), concat( " ", "card-text", " " )) and (((count(preceding-sibling::*) + 1) = 1) and parent::*)]//span | //td | //*[contains(concat( " ", @class, " " ), concat( " ", "card-title", " " ))]') %>%
-                   map(function (node) {data.frame(politician = str_replace_all(url_home, "https://justfacts.votesmart.org/candidate/public-statements/\\d+/|[^[:alnum:]]|date|p=|s=", " ") %>%
+                   map(function (node) {data.frame(politician = str_replace_all(url_home, "https://justfacts.votesmart.org/candidate/public-statements/\\d+/|[^[:alnum:]]|date|p=|s=", " ") %>% #mapping data frame on output 
                                                      trimws("both") %>%
                                                      rep(.,length.out = .),
                                                    office = node %>% 
@@ -70,11 +68,7 @@ head(trump_df)
 
 write_rds(trump_df, "trump_df_raw.rds")
 
-trump_df$politician
-
 #cleaning up df
-
-trump_df$speech_urls[1]
 
 trump_df$speech <- trump_df$speech[1:length(trump_df$speech)] %>%
   gsub("\\s+", " ", .) #Reduces to only single spaces/gets rid of extra blank spaces
@@ -84,54 +78,51 @@ trump_df$speech_urls <- trump_df$speech_urls[1:length(trump_df$speech_urls)] %>%
 
 #getting speech text of each page
 
-urls <- as.list(trump_df$speech_urls)
+urls <- as.list(trump_df$speech_urls) #creating list of urls to speech texts
 
-sites <- urls %>% map(purrr::safely(read_html, NA))
+sites <- urls %>% map(purrr::safely(read_html, NA)) #getting html of all speech texts (safely helps ensure the code runs through completion even in even of 404 or other errors)
 
-trump_sites <- lapply(sites, '[[', "result") 
-
-trump_sites_df <- plyr::ldply(trump_sites, data.frame)
-
-write_rds(trump_sites, "trump_sites.rds")
+trump_sites <- lapply(sites, '[[', "result") #extracting desired html from sits list
 
 speech_text <- trump_sites %>% 
   map_chr(purrr::possibly(. %>% html_node(xpath = '//*[contains(concat( " ", @class, " " ), concat( " ", "span-20", " " ))]') %>%
-                            html_text(trim = TRUE), NA))
+                            html_text(trim = TRUE), NA)) #extracting text of speeches from larger html page (if found)
 
 location <- trump_sites %>% 
   map_chr(purrr::possibly(. %>% html_node(xpath = '//span[(((count(preceding-sibling::*) + 1) = 8) and parent::*)]') %>% 
-                            html_text(trim = TRUE), NA))
+                            html_text(trim = TRUE), NA)) #extracting locations from larger html page (if found)
 time <- trump_sites %>%
   map_chr(purrr::possibly(. %>% html_node(xpath = '//p[(((count(preceding-sibling::*) + 1) = 1) and parent::*)]') %>%
-                            html_text(trim = TRUE), NA))
+                            html_text(trim = TRUE), NA))  #extracting time from larger html page (if found)
 
 speech_source_url <- trump_sites %>% 
   map_chr(purrr::possibly(. %>% html_node(xpath = '//*[contains(concat( " ", @class, " " ), concat( " ", "span-20", " " ))]//a') %>%
-                            html_attr("href"), NA))
+                            html_attr("href"), NA))  #extracting source of speech text from larger html page (if found)
 
 text_df <- data.frame("speech_text" = speech_text, 
                       "location" = location, 
                       "time" = time,
                       "speech_source_url" = speech_source_url, 
-                      stringsAsFactors = FALSE)
+                      stringsAsFactors = FALSE) #binding all variables in to one data frame
 
-write_rds(text_df, "trump_speeches_raw.rds")
+write_rds(text_df, "trump_speeches_raw.rds") #saving as raw data
 
-dat <- data.frame(trump_df, text_df, stringsAsFactors = FALSE) %>%
-  separate(office, into = c("office", "party"), sep = ",") %>%
-  mutate(speech_type = str_extract_all(.$speech, "Tweet|Remarks|Message|Proclamation"),
-         party = trimws(.$party, "both"),
-         office = trimws(.$office, "both"),
-         time = str_extract(.$time, "\\d{1,2}:\\d{2}"),
-         time_period = str_extract(.$time, "A.M.|P.M."),
-         time_zone = str_extract(.$time, "EST|PST|CST|MST")) %>%
+dat <- data.frame(trump_df, text_df, stringsAsFactors = FALSE) %>% #merging speech text data with home page data scraped earlier
+  separate(office, into = c("office", "party"), sep = ",") %>% #splitting office into office and political party
+  mutate(speech_type = str_extract_all(.$speech, "Tweet|Remarks|Message|Proclamation"), #extracting various types of speeches from text
+         party = trimws(.$party, "both"), #getting rid of spaces
+         office = trimws(.$office, "both"), #getting rid of spaces
+         time = str_extract(.$time, "\\d{1,2}:\\d{2}"), #extracting time of speeches
+         time_period = str_extract(.$time, "A.M.|P.M."), #determining period of day
+         time_zone = str_extract(.$time, "EST|PST|CST|MST")) %>% #determining time zones
   rename(speech_title = speech) %>%
-  mutate_all(., ~na_if(., "character(0)")) %>%
-  select(politician, office, party, location, date, time, time_period, time_zone, speech_urls, speech_type, speech_title, speech_text, speech_source_url)
+  mutate_all(., ~na_if(., "character(0)")) %>% #replacing "character(0)" entries with NA
+  select(politician, office, party, location, date, time, time_period, time_zone, speech_urls, 
+         speech_type, speech_title, speech_text, speech_source_url) #reordering variables
 
 dat %>%
-  filter(!is.na(speech_type)) %>%
-  nrow(.)
+  filter(!is.na(speech_type)) %>% #filter to only non-NA observations
+  nrow(.) #getting count of non-NA observations
 
 dat$speech_text <- dat$speech_text %>% #cleaning document text
   gsub("Source:\\s\\w.{1,}", "", .) %>% #removing "source" at the end of the text
