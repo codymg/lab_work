@@ -9,21 +9,23 @@ library(ggthemes)
 
 #Analysis 
 
-dat <- readRDS("C:/Users/codyg/Documents/GitHub_Projects/Presidential_Speeches/data/pol_2020_speeches.rds") %>% #read in data
-  filter(politician == 'donald trump') #filtering to politician of your choice for sake of quicker analysis
+#read in individual dat or if you want the entirety of the speech data, use the speech merging script and then use that dat in the following script
+
+dat <- readRDS(url("https://github.com/codymg/lab_work/raw/master/data/trump_dat.rds")) # %>% #read in data
+ # filter(politician == 'donald trump') #filtering to politician of your choice for sake of quicker analysis if you load all speeches
 
 
 #tokenizing 
 
-token_df <- data.frame(txt = dat$speech_text, stringsAsFactors = FALSE)
+token_df <- data.frame(txt = dat$speech_text, stringsAsFactors = FALSE) #tokenizing speeches
 
-stopwrds <- data.frame(words = stopwords("english", source = "snowball"))
+stopwrds <- data.frame(words = stopwords("english", source = "snowball")) #getting stopwords
 
-otherwrds <- data.frame(words = c("applause", "laughter", "president", "thank", "thanks"))
+otherwrds <- data.frame(words = c("applause", "laughter", "president", "thank", "thanks")) #getting other unwanted words from transcripts
 
-otherwrds$words <- as.character(otherwrds$words)
+otherwrds$words <- as.character(otherwrds$words) #ensuring class is same as stopwords
 
-stopwrds <- stopwrds %>%
+stopwrds <- stopwrds %>% #mergeing stopwrds and otherwrds
   bind_rows(otherwrds) %>%
   dplyr::select(words) %>%
   distinct(words)
@@ -62,7 +64,7 @@ lemmas <- token_df %>% #without filler words
   tidytext::unnest_tokens(word, txt) %>%
   anti_join(stopwrds, by = c("word" = "words")) %>%
   mutate(lemma = lemmatize_words(word)) %>% #lemmitizing
-  filter(lemma != ("s")) %>% #filtering out non-meaningful words
+  filter(nchar(stem) > 2) %>% #filters out words with less than 2 characters
   count(lemma, sort = TRUE) %>%
   head(25)
 
