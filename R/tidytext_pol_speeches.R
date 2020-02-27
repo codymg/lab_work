@@ -19,7 +19,7 @@ dat <- readRDS(url("https://github.com/codymg/lab_work/raw/master/data/trump_dat
 
 token_df <- data.frame(txt = dat$speech_text, stringsAsFactors = FALSE) #tokenizing speeches
 
-stopwrds <- data.frame(words = stopwords("english", source = "snowball")) #getting stopwords
+stopwrds <- data.frame(words = stopwords("english")) #getting stopwords
 
 otherwrds <- data.frame(words = c("applause", "laughter", "president", "thank", "thanks")) #getting other unwanted words from transcripts
 
@@ -34,9 +34,9 @@ stopwrds <- stopwrds %>% #mergeing stopwrds and otherwrds
 
 count_test <- token_df %>%
   tidytext::unnest_tokens(word, txt) %>% 
-  anti_join(stopwrds, by = c("word" = "words")) %>% #removing stop words based on snowball set
-  count(word, sort = TRUE) %>% 
-  filter(nchar(word) > 2) %>% #filters out words with less than 2 characters
+  dplyr::anti_join(stopwrds, by = c("word" = "words")) %>% #removing stop words based on snowball set
+  dplyr::count(word, sort = TRUE) %>% 
+  dplyr::filter(nchar(word) > 2) %>% #filters out words with less than 2 characters
   #filter(!word %in% c("","")) %>% would filter out specified non-meaningful words
   arrange(desc(n)) %>%
   head(25) #produces in UTF-8
@@ -48,10 +48,10 @@ wrds <- count_test %>% as.data.frame(.) %>%
 
 stems <- token_df %>%  
   tidytext::unnest_tokens(word, txt) %>%
-  anti_join(stopwrds, by = c("word" = "words")) %>% #removing stop words based on snowball set
-  mutate(stem = wordStem(word, language = "english")) %>% #getting only stems
-  filter(nchar(stem) > 2) %>% #filters out words with less than 2 characters
-  count(stem, sort = TRUE) %>%
+  dplyr::anti_join(stopwrds, by = c("word" = "words")) %>% #removing stop words based on snowball set
+  dplyr::mutate(stem = wordStem(word, language = "english")) %>% #getting only stems
+  dplyr::filter(nchar(stem) > 2) %>% #filters out words with less than 2 characters
+  dplyr::count(stem, sort = TRUE) %>%
   #filter(!stem %in% c("", "")) %>% filtering out non-meaningful words
   head(25) #produces in UTF-8
 
@@ -62,10 +62,10 @@ stms <- as.data.frame(stems) %>%
 
 lemmas <- token_df %>% #without filler words 
   tidytext::unnest_tokens(word, txt) %>%
-  anti_join(stopwrds, by = c("word" = "words")) %>%
-  mutate(lemma = lemmatize_words(word)) %>% #lemmitizing
-  filter(nchar(stem) > 2) %>% #filters out words with less than 2 characters
-  count(lemma, sort = TRUE) %>%
+  dplyr::anti_join(stopwrds, by = c("word" = "words")) %>%
+  dplyr::mutate(lemma = lemmatize_words(word)) %>% #lemmitizing
+  dplyr::filter(nchar(lemma) > 2) %>% #filters out words with less than 2 characters
+  dplyr::count(lemma, sort = TRUE) %>%
   head(25)
 
 lemmas
@@ -76,7 +76,7 @@ freqdf <- cbind(wrds,stms,lemmas) %>% as.data.frame(.) %>% print.corpus_frame(.)
 
 cloud <- ggplot(as.data.frame(token_df) %>%
                   tidytext::unnest_tokens(word, txt) %>%
-                  anti_join(stop_words) %>%
+                  anti_join(stopwrds, by = c("word" = "words")) %>%
                   mutate(lemma = lemmatize_words(word)) %>%
                   group_by(lemma) %>%
                   summarize(count = n()) %>%
